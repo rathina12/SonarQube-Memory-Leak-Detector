@@ -1,0 +1,10 @@
+# Optional custom memory API model.
+allocators:
+  - pool_alloc
+  - buffer_create
+deallocators:
+  - pool_free
+  - buffer_destroy
+ownership_sinks:
+  - register_owned_buffer
+  - take_ownership

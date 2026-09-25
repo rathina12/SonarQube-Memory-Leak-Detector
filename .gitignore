@@ -1,0 +1,10 @@
+build/
+cmake-build-*/
+sonar-plugin/target/
+.idea/
+.vscode/
+*.class
+*.jar
+*.log
+mlpca-report.json
+.DS_Store

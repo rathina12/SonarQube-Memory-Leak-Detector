@@ -1,0 +1,42 @@
+name: CI
+on:
+  push:
+  pull_request:
+
+jobs:
+  analyzer-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build analyzer
+        run: |
+          cmake -S analyzer -B build/analyzer -DCMAKE_BUILD_TYPE=Release
+          cmake --build build/analyzer -j2
+          ctest --test-dir build/analyzer --output-on-failure
+      - name: Validate fixtures
+        run: |
+          find examples -name '*.c' -print0 | xargs -0 -n1 clang -std=c17 -Wall -Wextra -Werror -fsyntax-only
+          find examples -name '*.cpp' -print0 | xargs -0 -n1 clang++ -std=c++17 -Wall -Wextra -Werror -fsyntax-only
+          ./build/analyzer/mlpca-analyzer examples --output build/mlpca-report.json
+          python3 -m json.tool build/mlpca-report.json >/dev/null
+
+  analyzer-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and test analyzer
+        shell: pwsh
+        run: ./scripts/build.ps1
+
+  sonar-plugin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - name: Build plugin
+        working-directory: sonar-plugin
+        run: mvn -B clean verify

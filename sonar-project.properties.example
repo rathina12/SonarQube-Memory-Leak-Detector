@@ -1,0 +1,4 @@
+sonar.projectKey=my-cpp-project
+sonar.projectName=My C++ Project
+sonar.sources=.
+sonar.mlpca.reportPaths=mlpca-report.json
