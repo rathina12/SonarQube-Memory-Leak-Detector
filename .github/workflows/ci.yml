@@ -13,6 +13,23 @@ jobs:
           cmake -S analyzer -B build/analyzer -DCMAKE_BUILD_TYPE=Release
           cmake --build build/analyzer -j2
           ctest --test-dir build/analyzer --output-on-failure
+      - name: CLI input-validation regression checks
+        run: |
+          python3 - <<'PY'
+          import subprocess
+          from pathlib import Path
+          exe = "./build/analyzer/mlpca-analyzer"
+          cases = [
+              (["--help"], 0),
+              (["examples", "--fail-on", "bogus"], 2),
+              (["examples", "--config", "missing-config.yml"], 2),
+              (["nonexistent-input"], 2),
+          ]
+          for args, expected in cases:
+              result = subprocess.run([exe, *args], capture_output=True, text=True)
+              assert result.returncode == expected, (args, result.returncode, result.stderr)
+          print("CLI regression checks passed")
+          PY
       - name: Validate fixtures
         run: |
           find examples -name '*.c' -print0 | xargs -0 -n1 clang -std=c17 -Wall -Wextra -Werror -fsyntax-only
