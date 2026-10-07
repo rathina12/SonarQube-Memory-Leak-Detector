@@ -68,6 +68,20 @@ int main(){
     auto r=a.analyzeSource("#include <stdlib.h>\nint *make(){ return (int*)malloc(4); }\n","ret.c");
     CHECK(r.issues.empty(),"ownership returned from function is not local leak");
   }
+  {
+    mlpca::AnalysisResult r;
+    mlpca::Issue issue;
+    issue.ruleId = "ML001";
+    issue.file = "example.c";
+    issue.line = 1;
+    issue.message = std::string("control:") + char(1) + char(12) + "\\n";
+    r.issues.push_back(issue);
+    const auto json = mlpca::toJson(r, "project");
+    CHECK(json.find("\\u0001") != std::string::npos,
+          "JSON escapes U+0001 control character");
+    CHECK(json.find("\\u000c") != std::string::npos,
+          "JSON escapes U+000C control character");
+  }
   if(failures){ std::cerr<<failures<<" test(s) failed\n"; return 1; }
   std::cout<<"All tests passed\n"; return 0;
 }
