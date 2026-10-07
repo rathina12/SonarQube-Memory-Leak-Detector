@@ -1,5 +1,6 @@
 #include "mlpca/JsonWriter.hpp"
 #include <fstream>
+#include <iomanip>
 #include <sstream>
 
 namespace mlpca {
@@ -7,14 +8,22 @@ namespace {
 std::string esc(const std::string& s) {
   std::string o;
   o.reserve(s.size() + 16);
-  for (char c : s) {
+  for (unsigned char c : s) {
     switch (c) {
       case '\\': o += "\\\\"; break;
       case '"': o += "\\\""; break;
       case '\n': o += "\\n"; break;
       case '\r': o += "\\r"; break;
       case '\t': o += "\\t"; break;
-      default: o += c;
+      default:
+        if (c < 0x20) {
+          static constexpr char hex[] = "0123456789abcdef";
+          o += "\\u00";
+          o += hex[c >> 4];
+          o += hex[c & 0x0f];
+        } else {
+          o += static_cast<char>(c);
+        }
     }
   }
   return o;
