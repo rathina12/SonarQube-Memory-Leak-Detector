@@ -173,7 +173,7 @@ Analyzer::Analyzer(AnalyzerConfig config):config_(std::move(config)){}
 
 AnalysisResult Analyzer::analyzeSource(const std::string& source, const std::string& file) {
   AnalysisResult r; r.metrics.filesScanned=1; const auto t=Lexer::tokenize(source); const auto summaries=buildFunctionSummaries(t,config_); State s; std::vector<std::pair<int,std::string>> controlBraces;
-  for(std::size_t i=0;i<t.size();++i){ const auto& tok=t[i]; if(tok.text=="if" || tok.text=="switch"){ ++r.metrics.branchesObserved; ++r.metrics.pathStatesCreated; }
+  for(std::size_t i=0;i<t.size();++i){ const auto& tok=t[i]; if(tok.text=="if" || tok.text=="switch"){ ++r.metrics.branchesObserved; }
     if(s.function.empty() && isIdentifier(tok.text) && !isControlKeyword(tok.text) && i+1<t.size() && t[i+1].text=="("){ auto close=findMatching(t,i+1,"(",")"); if(close<t.size() && close+1<t.size() && t[close+1].text=="{"){ s.function=tok.text; s.functionBraceDepth=s.braceDepth+1; } }
     if(tok.text=="{"){ ++s.braceDepth; std::string kind; if (i > 0 && t[i-1].text == ")") { const auto open = findOpenParenBackward(t, i - 1); if (open < t.size() && open > 0) { const auto& kw = t[open - 1].text; if (kw == "if" || kw == "switch" || kw == "catch") kind = "cond"; else if (kw == "for" || kw == "while") kind = "loop"; } } else if (i > 0 && t[i-1].text == "else") kind = "cond"; else if (i > 0 && t[i-1].text == "do") kind = "loop"; if(kind=="cond") ++s.conditionalDepth; if(kind=="loop") ++s.loopDepth; if(!kind.empty()) controlBraces.push_back({s.braceDepth,kind}); continue; }
     if(tok.text=="}"){ if(!s.function.empty() && s.braceDepth==s.functionBraceDepth) reportFunctionEnd(s,r,file,tok); if(!controlBraces.empty() && controlBraces.back().first==s.braceDepth){ if(controlBraces.back().second=="cond" && s.conditionalDepth>0) --s.conditionalDepth; if(controlBraces.back().second=="loop" && s.loopDepth>0) --s.loopDepth; controlBraces.pop_back(); } if(s.braceDepth>0) --s.braceDepth; continue; }
@@ -191,7 +191,7 @@ AnalysisResult Analyzer::analyzeSource(const std::string& source, const std::str
     if(tok.text=="*" && i+1<t.size() && isIdentifier(t[i+1].text) && s.freedAliases.count(t[i+1].text)) appendIssue(r,baseIssue("ML009",Severity::Critical,file,tok,"Dereference of freed pointer '"+t[i+1].text+"'",t[i+1].text));
     if(isIdentifier(tok.text) && s.freedAliases.count(tok.text) && i+1<t.size() && (t[i+1].text=="[" || t[i+1].text=="->")) appendIssue(r,baseIssue("ML009",Severity::Critical,file,tok,"Use after free of pointer '"+tok.text+"'",tok.text));
   }
-  if(!s.function.empty() && !t.empty()) reportFunctionEnd(s,r,file,t.back()); r.metrics.pathStatesMerged = r.metrics.branchesObserved > 0 ? r.metrics.branchesObserved / 2 : 0; return r;
+  if(!s.function.empty() && !t.empty()) reportFunctionEnd(s,r,file,t.back()); return r;
 }
 
 AnalysisResult Analyzer::analyzePath(const fs::path& root) {
