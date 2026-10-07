@@ -14,7 +14,6 @@ import org.sonar.api.batch.sensor.SensorDescriptor;
 import org.sonar.api.batch.sensor.issue.NewExternalIssue;
 import org.sonar.api.batch.sensor.issue.NewIssueLocation;
 import org.sonar.api.config.Configuration;
-import org.sonar.api.issue.RuleType;
 import org.sonar.api.utils.log.Logger;
 import org.sonar.api.utils.log.Loggers;
 
@@ -103,7 +102,6 @@ public final class MlpcaSensor implements Sensor {
         .engineId(ENGINE)
         .ruleId(f.ruleId)
         .severity(mapSeverity(f.severity))
-        .type(RuleType.BUG)
         .remediationEffortMinutes(remediationMinutes(f.ruleId));
 
     NewIssueLocation primary = issue.newLocation()

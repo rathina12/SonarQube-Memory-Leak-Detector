@@ -13,17 +13,28 @@ int rank(mlpca::Severity s){switch(s){case mlpca::Severity::Critical:return 3;ca
 }
 int main(int argc,char**argv){
   if(argc<2){usage();return 2;}
+  if(std::string(argv[1]) == "--help"){usage();return 0;}
   std::string input=argv[1], output="mlpca-report.json", configPath, failOn="none"; bool headers=false;
   for(int i=2;i<argc;++i){std::string a=argv[i];
     if(a=="--output"&&i+1<argc)output=argv[++i]; else if(a=="--config"&&i+1<argc)configPath=argv[++i];
     else if(a=="--headers")headers=true; else if(a=="--fail-on"&&i+1<argc)failOn=argv[++i]; else if(a=="--help"){usage();return 0;} else {std::cerr<<"Unknown option: "<<a<<"\n";return 2;}
   }
+  if(failOn!="none" && failOn!="critical" && failOn!="major"){
+    std::cerr<<"Invalid --fail-on value: "<<failOn<<" (expected critical, major or none)\n";return 2;
+  }
+  if(!configPath.empty() && !std::filesystem::is_regular_file(configPath)){
+    std::cerr<<"Configuration file does not exist: "<<configPath<<"\n";return 2;
+  }
   auto cfg=mlpca::loadConfig(configPath); cfg.analyzeHeaders=headers;
   if(!std::filesystem::exists(input)){std::cerr<<"Input path does not exist: "<<input<<"\n";return 2;}
   mlpca::Analyzer analyzer(cfg); auto r=analyzer.analyzePath(input);
+  if(r.metrics.filesFailed > 0){
+    std::cerr<<"Analysis incomplete: "<<r.metrics.filesFailed<<" source file(s) could not be read\n";
+  }
   if(!mlpca::writeJsonReport(r,std::filesystem::absolute(input).generic_string(),output)){std::cerr<<"Failed to write report: "<<output<<"\n";return 3;}
   std::cout<<"MLPCA: scanned="<<r.metrics.filesScanned<<" failed="<<r.metrics.filesFailed<<" allocations="<<r.metrics.allocations<<" releases="<<r.metrics.releases<<" issues="<<r.issues.size()<<"\n";
   for(const auto& x:r.issues) std::cout<<x.file<<":"<<x.line<<" ["<<x.ruleId<<"/"<<mlpca::toString(x.severity)<<"] "<<x.message<<"\n";
+  if(r.metrics.filesFailed > 0) return 3;
   if(failOn!="none"){
     int threshold=failOn=="critical"?3:2; for(const auto&x:r.issues) if(rank(x.severity)>=threshold) return 10;
   }
